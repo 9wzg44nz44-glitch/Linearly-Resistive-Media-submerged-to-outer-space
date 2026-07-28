@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLW Media Propagation Simulator — Hively POUT & ε/μ Effects</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --card: #1a2332;
+    --accent: #3b82f6;
+    --accent2: #10b981;
+    --warn: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    padding: 1rem 1.5rem 3rem;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.55rem; color: #60a5fa; margin-bottom: 0.4rem; }
+  h2 { font-size: 1.2rem; color: #34d399; margin: 1.4rem 0 0.6rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; }
+  h3 { font-size: 1.05rem; color: #fbbf24; margin: 1rem 0 0.4rem; }
+  p, li { color: var(--muted); font-size: 0.95rem; }
+  a { color: #60a5fa; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin: 0.8rem 0;
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  .controls label { display: block; font-size: 0.85rem; color: var(--muted); margin-top: 0.6rem; }
+  .controls input[type=range], .controls select, .controls input[type=number] {
+    width: 100%; margin-top: 0.2rem; accent-color: var(--accent);
+  }
+  .value { color: #f8fafc; font-weight: 600; font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.5rem 0; }
+  th, td { border: 1px solid var(--border); padding: 0.35rem 0.5rem; text-align: left; }
+  th { background: #243044; color: #93c5fd; }
+  tr:nth-child(even) { background: #1e293b; }
+  .highlight { background: #1e3a5f !important; }
+  .formula {
+    background: #0c1220;
+    border-left: 4px solid var(--accent);
+    padding: 0.7rem 1rem;
+    font-family: 'Cambria Math', 'Times New Roman', serif;
+    font-size: 1.05rem;
+    margin: 0.6rem 0;
+    overflow-x: auto;
+  }
+  .note { font-size: 0.88rem; color: #a5b4fc; background: #1e1b4b; padding: 0.5rem 0.8rem; border-radius: 6px; margin: 0.5rem 0; }
+  .warnbox { background: #451a03; border: 1px solid #b45309; color: #fcd34d; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.9rem; }
+  canvas { background: #0c1220; border-radius: 8px; width: 100%; max-width: 700px; display: block; margin: 0.5rem auto; }
+  .btn {
+    background: var(--accent); color: white; border: none; padding: 0.5rem 1rem;
+    border-radius: 6px; cursor: pointer; font-weight: 600; margin: 0.3rem 0.3rem 0.3rem 0;
+  }
+  .btn:hover { background: #2563eb; }
+  .btn.secondary { background: #475569; }
+  .btn.secondary:hover { background: #64748b; }
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.6rem; }
+  .result-item {
+    background: #0f172a; border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.6rem 0.8rem; text-align: center;
+  }
+  .result-item .label { font-size: 0.78rem; color: var(--muted); }
+  .result-item .num { font-size: 1.15rem; font-weight: 700; color: #e0f2fe; margin-top: 0.15rem; }
+  .path-legend span { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+  footer { margin-top: 2rem; font-size: 0.8rem; color: #64748b; text-align: center; }
+</style>
+</head>
+<body>
+  <h1>SLW Propagation through Media — Permittivity &amp; Permeability Effects</h1>
+  <p style="margin-bottom:0.8rem;">Interactive educational simulator based on Hively’s Extended Electrodynamics (EED) / US Patent 9,306,527. Uses the radiated power equation for a scalar-longitudinal wave (SLW) monopole and shows how the medium’s <strong>ε</strong> and <strong>μ</strong> (relative to free space) change the wave impedance and therefore the power delivered for a given antenna current. Skin effect is intentionally omitted (theory predicts none because <strong>B = 0</strong>). Assumption of linearly resistive (Ohmic) media is examined for each material including vacuum / LEO / GEO.</p>
+
+  <div class="card">
+    <h2>1. The Power-Out Equation (Hively)</h2>
+    <div class="formula">
+      P<sub>OUT</sub> = (I<sup>2</sup> / (4π r)<sup>2</sup>) × √(μ / ε) &nbsp;&nbsp;=&nbsp;&nbsp; (I<sup>2</sup> Z) / (4π r)<sup>2</sup>
+    </div>
+    <p>where <strong>Z = √(μ/ε)</strong> is the intrinsic impedance of the propagation medium, <strong>I</strong> is the peak antenna current of the gradient-driven (irrotational) current density, and <strong>r</strong> is radial distance. In free space Z<sub>0</sub> ≈ 376.73 Ω. Changing the medium changes Z:</p>
+    <div class="formula">
+      Z = Z<sub>0</sub> × √(μ<sub>r</sub> / ε<sub>r</sub>)
+    </div>
+    <p>In this scenario the transmitter is always in <strong>air inside the copper Faraday cage</strong>, so Z ≈ Z<sub>0</sub>. The SLW then propagates through the subsequent media. Only geometric 1/r<sup>2</sup> spreading of power density is applied; classical skin-effect and Fresnel losses are omitted.</p>
+    <p><strong>Corrected formula (28 Jul 2026):</strong> Earlier versions of this page contained a coding error that made total power fall as 1/r² (and density as 1/r⁴). That is physically impossible for a continuous-wave radiator and produced unrealistically high required currents at long range. The corrected educational model is:</p>
+    <div class="formula">
+      S = [I² Z / (4π r)²] &nbsp;&nbsp;(power density, W/m²)<br>
+      P<sub>total</sub> = S × 4π r² = I² Z / (4π) &nbsp;&nbsp;(total power, independent of r)
+    </div>
+    <p>This restores the scale of the earlier SNR simulators (tens of amperes for positive SNR at hundreds of km) while remaining consistent with free-space geometric spreading and with the Nikolova–Zimmerman free-space A<sub>z</sub> ~ μ<sub>0</sub> I L<sub>eff</sub> / (4π r) amplitude.</p>
+    <div class="note">
+      Key theoretical claim (Hively et al.): because the SLW has B ≡ 0 there are no Faraday-induced eddy currents, so the classical skin effect does not attenuate the wave even in good conductors. Propagation in linearly conductive media (J = σE with constant σ) is lossless for the SLW amplitude beyond the usual geometric factor.
+    </div>
+    <div class="note">
+      <strong>Important for ferromagnetic media (steel):</strong> Ordinary engineering tables list μ<sub>r</sub> ≫ 1 for steel because permeability is defined via B = μ H. An SLW carries B ≡ 0, so there is no magnetic field for the ferromagnetic domain response to act upon. This simulator therefore treats steel with μ<sub>r</sub> ≈ 1 (same as copper, air, vacuum). Using the classical high μ<sub>r</sub> would incorrectly inflate Z and P<sub>OUT</sub>.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>1b. Interface Reflections — Why Classical Fresnel Does Not Apply</h2>
+    <p>Classical TEM reflection/transmission coefficients (Fresnel formulas) are derived from continuity of <em>tangential</em> <strong>E</strong> and <strong>H</strong>. An SLW has <strong>B ≡ 0</strong> and a purely longitudinal (normal) <strong>E</strong>, so those conditions do not exist.</p>
+    <p>EED supplies its own interface matching conditions. The most directly relevant is continuity of the normal component of ∇C / μ:</p>
+    <div class="formula">
+      (∇C / μ)<sub>1n</sub> = (∇C / μ)<sub>2n</sub>
+    </div>
+    <p>plus corrected conditions on the surface charge density ρ<sub>A</sub> and surface current density J<sub>A</sub>. These conditions generally require a reflected wave whenever ε or μ (or the complex permittivity) jumps. Hively’s own experimental notes also report that the tests “showed scattering and reflections of the SLW,” attributed to image-charge / image-current effects acting on the longitudinal E-field.</p>
+    <div class="warnbox">
+      Therefore this simulator does <strong>not</strong> apply classical Fresnel power transmission factors. Interface transmission is set to unity for the link-budget calculation. The quantitative magnitude of SLW reflection/transmission coefficients remains an open problem that requires a full EED boundary-value solution; the dominant, rigorously established effects retained here are (1) the local Z that multiplies I<sup>2</sup> in P<sub>OUT</sub> and (2) geometric 1/r<sup>2</sup> spreading.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Linearly Resistive / Conductive Media Assumption</h2>
+    <p>Hively’s derivation of the spherical-wave impedance and the no-skin-effect result assumes <em>linearly conductive</em> (or linearly resistive) media: Ohm’s law holds with a constant conductivity σ independent of field strength. Applicability check for the media in this scenario:</p>
+    <table>
+      <thead>
+        <tr><th>Medium</th><th>σ (S/m)</th><th>ε<sub>r</sub> (approx)</th><th>μ<sub>r</sub></th><th>Linear Ohmic?</th><th>Notes for SLW</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Vacuum / outer space (LEO–GEO)</td><td>~0</td><td>1</td><td>1</td><td>N/A (pure dielectric)</td><td>Limit of theory; Z = Z<sub>0</sub>; no dissipation</td></tr>
+        <tr><td>Dry air</td><td>~10<sup>−14</sup></td><td>1.0006</td><td>1</td><td>Yes</td><td>Essentially free-space</td></tr>
+        <tr><td>Seawater (typical)</td><td>4–5</td><td>~80 (low GHz)</td><td>1</td><td>Yes (moderate E)</td><td>High ε lowers Z; classical skin depth tiny, but SLW theory says no skin loss</td></tr>
+        <tr><td>Copper (cage wall)</td><td>5.8×10<sup>7</sup></td><td>~1 (or complex)</td><td>~1</td><td>Yes until extreme current density</td><td>Faraday cage for TEM; SLW predicted to penetrate</td></tr>
+        <tr><td>Mild / carbon steel (large cylinder)</td><td>~10<sup>6</sup>–10<sup>7</sup></td><td>~1</td><td>≈1 (for SLW)</td><td>Yes</td><td>Classical μ<sub>r</sub> ≫ 1 is a B–H response. With SLW B≡0 the effective μ<sub>r</sub> is taken as ≈1; no classical high-μ inflation of Z</td></tr>
+        <tr><td>Earth crust / rock / dry soil</td><td>10<sup>−3</sup>–10<sup>−1</sup></td><td>4–15</td><td>~1</td><td>Yes</td><td>Lossy dielectric; SLW still geometric only under linear assumption</td></tr>
+        <tr><td>Wet soil / clay</td><td>0.01–1</td><td>10–40</td><td>~1</td><td>Yes</td><td>Higher ε and σ</td></tr>
+      </tbody>
+    </table>
+    <p class="note">For vacuum, LEO (~400 km) and GEO (~35 786 km) the medium is free space; the linearly-resistive assumption is simply the σ→0 limit and remains valid. Non-linearities (dielectric breakdown, heating that changes σ) would appear only at extreme field strengths far above practical antenna currents. Magnetic saturation is irrelevant for pure SLW because B≡0.</p>
+  </div>
+
+  <div class="card">
+    <h2>3. Scenario Geometry</h2>
+    <p>Transmitter is inside a copper Faraday cage (cylinder 16 in long × 3 in OD, wall/end-cap thickness ⅛ in). The wave then travels through an air-filled steel cylinder (33 ft diameter × 330 ft long, wall/end-cap thickness 3 in) that is submerged under 300 ft of seawater. After exiting into the ocean the wave continues a variable distance <strong>r</strong> to a receiver that can be:</p>
+    <ul style="margin:0.4rem 0 0.6rem 1.2rem; color:var(--muted);">
+      <li>on a surface ship (line-of-sight limited by Earth curvature; beyond-horizon path may traverse seawater or crust);</li>
+      <li>on an airplane at selectable altitude;</li>
+      <li>on land or a mountain (additional path through rock/soil of selectable thickness);</li>
+      <li>or in space (LEO / GEO) after emerging into vacuum.</li>
+    </ul>
+    <p>TX and RX may be swapped. Because the theory predicts no skin-effect attenuation, the copper and steel walls are treated as thin geometric segments. Classical TEM interface reflection coefficients are not applied (see §1b); transmission is taken as unity for the link budget.</p>
+    <canvas id="pathCanvas" width="700" height="220"></canvas>
+    <div class="path-legend" style="text-align:center; font-size:0.82rem; margin-top:0.3rem;">
+      <span style="background:#b45309;"></span>Copper &nbsp;
+      <span style="background:#38bdf8;"></span>Air (inside steel) &nbsp;
+      <span style="background:#64748b;"></span>Steel wall &nbsp;
+      <span style="background:#0ea5e9;"></span>Seawater &nbsp;
+      <span style="background:#a78bfa;"></span>Outer medium (air / crust / vacuum)
+    </div>
+  </div>
+
+  <div class="card controls">
+    <h2>4. Interactive Controls</h2>
+    <div class="grid2">
+      <div>
+        <label>Antenna current I (A) — log scale <span class="value" id="Ival">1.00</span> A</label>
+        <input type="range" id="I" min="-6" max="2" step="0.01" value="0">
+
+        <label>Frequency f (GHz) <span class="value" id="fval">1.00</span> GHz</label>
+        <input type="range" id="f" min="0.1" max="15" step="0.1" value="1">
+
+        <label>Total radial distance r <span class="value" id="rval">1000</span> m</label>
+        <input type="range" id="r" min="1" max="40000000" step="1" value="1000">
+        <div style="font-size:0.8rem; color:#64748b;">(1 m … 40 000 km covers table-top → LEO → GEO)</div>
+
+        <label>Receiver platform</label>
+        <select id="platform">
+          <option value="ship">Surface ship (ocean)</option>
+          <option value="plane">Airplane</option>
+          <option value="land">Land / mountain (through crust)</option>
+          <option value="space">Space (vacuum after exit)</option>
+        </select>
+
+        <label id="altLabel">Airplane altitude (m) <span class="value" id="altval">10000</span></label>
+        <input type="range" id="alt" min="100" max="20000" step="100" value="10000">
+
+        <label id="crustLabel">Crust / rock path length (m) <span class="value" id="crustval">500</span></label>
+        <input type="range" id="crust" min="10" max="5000" step="10" value="500">
+      </div>
+      <div>
+        <label>TX medium (fixed by geometry)</label>
+        <div style="padding:0.45rem 0.7rem; background:#0f172a; border:1px solid var(--border); border-radius:6px; color:#94a3b8; font-size:0.88rem; margin-top:0.25rem;">
+          Always <strong>air inside the copper Faraday cage</strong> (Z ≈ Z<sub>0</sub>). The antenna is not immersed in seawater, steel, or crust; the SLW is launched from air and then propagates through the subsequent media.
+        </div>
+        <input type="hidden" id="txMedium" value="air">
+
+        <label>RX / outer medium</label>
+        <select id="rxMedium">
+          <option value="air">Air / atmosphere</option>
+          <option value="seawater">Seawater</option>
+          <option value="crust">Crust / rock / soil</option>
+          <option value="vacuum">Vacuum (space)</option>
+        </select>
+
+        <label>Detector type</label>
+        <select id="detector">
+          <option value="bifilar">Hively pancake bifilar coil</option>
+          <option value="plasma">Nikolova–Zimmerman U-shaped plasma bulb</option>
+        </select>
+
+        <label>Target SNR (linear ratio)</label>
+        <input type="number" id="snrTarget" value="10" min="1" max="1000" step="1">
+
+        <div style="margin-top:1rem;">
+          <button class="btn" onclick="swapEnds()">Swap TX ↔ RX</button>
+          <button class="btn secondary" onclick="setPreset('lab')">Lab (10 m)</button>
+          <button class="btn secondary" onclick="setPreset('ship')">Ship 5 km</button>
+          <button class="btn secondary" onclick="setPreset('leo')">LEO 400 km</button>
+          <button class="btn secondary" onclick="setPreset('geo')">GEO</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>5. Calculated Results</h2>
+    <div class="result-grid" id="results">
+      <!-- filled by JS -->
+    </div>
+    <h3 style="margin-top:1rem;">Path Segments &amp; Cumulative Factors</h3>
+    <table id="segTable">
+      <thead><tr><th>Segment</th><th>Length</th><th>ε<sub>r</sub></th><th>μ<sub>r</sub></th><th>Z / Z<sub>0</sub></th><th>Note</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="warnbox" id="curvatureNote" style="display:none; margin-top:0.8rem;"></div>
+  </div>
+
+  <div class="card">
+    <h2>6. How to Read the Physics</h2>
+    <ul style="margin-left:1.2rem; color:var(--muted);">
+      <li><strong>TX always in air</strong> — the antenna is inside the copper Faraday cage, so Z ≈ Z<sub>0</sub>. High-ε seawater does not reduce radiated power.</li>
+      <li><strong>Geometric 1/r² on power density</strong> is the only propagation loss. Total radiated power is independent of r. Changing r by ×10 changes S by ×100.</li>
+      <li><strong>Hively vs Nikolova–Zimmerman</strong> — Hively supplies the power/flux picture (CE/μ); Nikolova–Zimmerman supply the free-space A<sub>z</sub> amplitude ~ μ<sub>0</sub> I L<sub>eff</sub>/(4π r). Both are shown; they are consistent in free space.</li>
+      <li><strong>Interface effects</strong> — classical TEM Fresnel coefficients are not applied (see §1b). Numerical link budget uses T ≡ 1.</li>
+      <li><strong>No classical skin loss</strong> — copper and steel walls contribute only geometric thickness. Theory predicts the SLW is unconstrained by skin effect because B ≡ 0.</li>
+      <li><strong>Detector current</strong> is estimated proportionally to the local E-field (or √(S·Z)) at the receiver; absolute calibration is illustrative. Previous SNR simulators supplied the qualitative scale used here.</li>
+      <li><strong>Required I</strong> is the antenna current needed to reach the chosen target SNR at the detector (thermal-noise floor model + detector noise factor).</li>
+      <li>Earth curvature is flagged for surface-ship paths longer than the geometric horizon (~ few tens of km for low antennas). Beyond-horizon propagation is assumed to continue either through seawater or through the crust according to the platform setting.</li>
+    </ul>
+  </div>
+
+  <footer>
+    Educational tool for scalar-longitudinal-wave studies (Hively EED / US 9,306,527 + Nikolova–Zimmerman CEM-R-46). 
+    Not a claim of experimental validation. Linearly-resistive assumption and absence of skin effect are theoretical predictions of the cited work.
+    TX fixed in air (Z ≈ Z<sub>0</sub>). Power-density formula corrected 28 Jul 2026 so total power is independent of r (previous 1/r⁴ density error removed). Classical Fresnel omitted; steel μ<sub>r</sub> ≈ 1 (B ≡ 0).
+  </footer>
+
+<script>
+// Physical constants
+const Z0 = 376.730313668; // ohm
+const mu0 = 1.25663706212e-6;
+const eps0 = 8.8541878128e-12;
+const c = 299792458;
+const RE = 6371000; // Earth radius m
+
+// Media library (relative values; order-of-magnitude realistic)
+const MEDIA = {
+  vacuum:  { name: "Vacuum / free space", eps_r: 1,    mu_r: 1,    sigma: 0,        color: "#a78bfa" },
+  air:     { name: "Air",                 eps_r: 1.0006, mu_r: 1,  sigma: 1e-14,    color: "#38bdf8" },
+  seawater:{ name: "Seawater",            eps_r: 80,   mu_r: 1,    sigma: 4.0,      color: "#0ea5e9" },
+  copper:  { name: "Copper",              eps_r: 1,    mu_r: 0.99999, sigma: 5.8e7, color: "#b45309" },
+  steel:   { name: "Mild steel",          eps_r: 1,    mu_r: 1,    sigma: 5e6,      color: "#64748b" },
+  crust:   { name: "Crust / rock / soil", eps_r: 10,   mu_r: 1,    sigma: 0.01,     color: "#a16207" }
+};
+
+function Z_of(m) {
+  return Z0 * Math.sqrt(m.mu_r / m.eps_r);
+}
+
+// Fixed enclosure lengths (approximate from user description)
+const LEN = {
+  copper_wall: 0.003175,   // 1/8 inch
+  air_inside: 100.584,     // 330 ft cylinder length used as air path
+  steel_wall: 0.0762,      // 3 inch
+  seawater_exit: 91.44     // 300 ft
+};
+
+// DOM
+const el = id => document.getElementById(id);
+const Islider = el("I"), fslider = el("f"), rslider = el("r");
+const platformSel = el("platform"), altSlider = el("alt"), crustSlider = el("crust");
+const txMedSel = el("txMedium"), rxMedSel = el("rxMedium"), detSel = el("detector");
+const snrTargetInp = el("snrTarget");
+
+function updateLabels() {
+  const I = Math.pow(10, parseFloat(Islider.value));
+  el("Ival").textContent = I >= 1 ? I.toFixed(2) : I.toExponential(2);
+  el("fval").textContent = parseFloat(fslider.value).toFixed(2);
+  const r = parseFloat(rslider.value);
+  el("rval").textContent = r >= 1000 ? (r/1000).toFixed(2) + " km" : r.toFixed(1) + " m";
+  el("altval").textContent = parseFloat(altSlider.value);
+  el("crustval").textContent = parseFloat(crustSlider.value);
+
+  // show/hide altitude & crust
+  const plat = platformSel.value;
+  el("altLabel").style.display = (plat === "plane") ? "block" : "none";
+  altSlider.style.display = (plat === "plane") ? "block" : "none";
+  el("crustLabel").style.display = (plat === "land") ? "block" : "none";
+  crustSlider.style.display = (plat === "land") ? "block" : "none";
+}
+
+function setPreset(name) {
+  if (name === "lab") { rslider.value = 10; platformSel.value = "ship"; rxMedSel.value = "air"; }
+  if (name === "ship") { rslider.value = 5000; platformSel.value = "ship"; rxMedSel.value = "air"; }
+  if (name === "leo") { rslider.value = 400000; platformSel.value = "space"; rxMedSel.value = "vacuum"; }
+  if (name === "geo") { rslider.value = 35786000; platformSel.value = "space"; rxMedSel.value = "vacuum"; }
+  updateLabels();
+  recalc();
+}
+
+function swapEnds() {
+  // TX is fixed in air inside the cage; swapping only exchanges the conceptual RX platform medium for educational comparison
+  alert("TX is fixed in air inside the copper Faraday cage by the scenario geometry. Only the outer / RX medium can be varied.");
+  recalc();
+}
+
+function buildPath(r, platform, alt, crustLen) {
+  // Returns ordered list of {name, len, mediaKey}
+  const segs = [];
+  // Always start with copper wall (exit from cage)
+  segs.push({ name: "Copper cage wall", len: LEN.copper_wall, key: "copper" });
+  segs.push({ name: "Air inside steel cylinder", len: LEN.air_inside, key: "air" });
+  segs.push({ name: "Steel cylinder wall", len: LEN.steel_wall, key: "steel" });
+  segs.push({ name: "Seawater exit path", len: LEN.seawater_exit, key: "seawater" });
+
+  const fixed = LEN.copper_wall + LEN.air_inside + LEN.steel_wall + LEN.seawater_exit;
+  let remaining = Math.max(0, r - fixed);
+
+  if (platform === "ship") {
+    segs.push({ name: "Ocean / air to ship", len: remaining, key: rxMedSel.value === "seawater" ? "seawater" : "air" });
+  } else if (platform === "plane") {
+    segs.push({ name: "Atmosphere to aircraft", len: remaining, key: "air" });
+  } else if (platform === "land") {
+    const crust = Math.min(remaining, crustLen);
+    const after = Math.max(0, remaining - crust);
+    segs.push({ name: "Crust / rock / soil", len: crust, key: "crust" });
+    if (after > 0) segs.push({ name: "Surface path after crust", len: after, key: "air" });
+  } else { // space
+    segs.push({ name: "Vacuum / space", len: remaining, key: "vacuum" });
+  }
+  return segs;
+}
+
+function recalc() {
+  updateLabels();
+  const I = Math.pow(10, parseFloat(Islider.value));
+  const f = parseFloat(fslider.value) * 1e9; // Hz
+  const r = parseFloat(rslider.value);
+  const platform = platformSel.value;
+  const alt = parseFloat(altSlider.value);
+  const crustLen = parseFloat(crustSlider.value);
+  const txKey = "air"; // fixed: antenna always in air inside copper Faraday cage
+  const rxKey = rxMedSel.value;
+  const det = detSel.value;
+  const snrT = parseFloat(snrTargetInp.value) || 10;
+
+  const txM = MEDIA[txKey];
+  const Ztx = Z_of(txM); // ≈ Z0
+
+  // ========== CORRECTED POWER / DENSITY ==========
+  // Previous code erroneously made total power fall as 1/r² (then density as 1/r⁴).
+  // That is physically impossible for a CW radiator and was the source of unrealistically
+  // high required currents at long range.
+  //
+  // Correct educational model consistent with free-space isotropic SLW monopole:
+  //   Power density S falls as 1/r²
+  //   Total radiated power P_total is independent of r
+  //
+  // We take the free-space form that recovers the earlier simulators’ scale:
+  //   S = (I² * Z) / (4π r)²          [W/m²]
+  //   P_total = S * 4π r² = (I² * Z) / (4π)   [W]
+  //
+  // This matches the spirit of Hively’s CE/μ flux integrated over a sphere while
+  // preserving geometric spreading only. Classical skin / Fresnel factors remain off.
+
+  const S = (I * I * Ztx) / Math.pow(4 * Math.PI * r, 2); // W/m²  (power density)
+  const Pout = S * 4 * Math.PI * r * r;                  // W     (total power, independent of r)
+
+  // Path (for display and local Z only)
+  const segs = buildPath(r, platform, alt, crustLen);
+  const rows = [];
+  segs.forEach((s) => {
+    const m = MEDIA[s.key];
+    const Z = Z_of(m);
+    rows.push({ ...s, m, Z });
+  });
+
+  // Local E-field estimate (plane-wave-like): S ≈ E² / Z  => E ≈ sqrt(S * Z)
+  const Zrx = Z_of(MEDIA[rxKey]);
+  const E = Math.sqrt(Math.max(0, S * Zrx)); // V/m
+
+  // ---------- Nikolova–Zimmerman comparison ----------
+  // Free-space A_z amplitude (Eq. 5 / Eq. 8 style) for a short effective length.
+  // A ~ (μ0 * I_eff) / (4π r).  We use an effective length scale ~0.1 m for illustration.
+  const mu0 = 1.256637e-6;
+  const Leff = 0.1; // m, educational effective length of gradient-driven element
+  const A_nz = (mu0 * I * Leff) / (4 * Math.PI * r); // Wb/m  (approx peak)
+
+  // Detector current (illustrative scaling)
+  // Bifilar: roughly proportional to longitudinal E * effective height / resistance
+  // Plasma bulb: different coupling, lower efficiency assumed
+  let k_det = (det === "bifilar") ? 2e-4 : 5e-5; // A per (V/m)  — order-of-magnitude educational
+  const I_det = k_det * E;
+
+  // Simple noise model: thermal + detector noise floor ~ 1 pA / sqrt(Hz) scaled, bandwidth ~1% of f
+  const BW = 0.01 * f;
+  const I_noise = 1e-12 * Math.sqrt(BW) * (det === "bifilar" ? 3 : 8); // rough
+  const SNR = I_det / (I_noise + 1e-18);
+
+  // Required I for target SNR (scale from current)
+  const I_req = (SNR > 0) ? I * Math.sqrt(snrT / SNR) : Infinity;
+
+  // Horizon check for ship
+  if (platform === "ship") {
+    const h_tx = 100; // m depth approx
+    const h_rx = 10;  // ship antenna
+    const d_horizon = Math.sqrt(2 * RE * h_tx) + Math.sqrt(2 * RE * h_rx); // m
+    if (r > d_horizon) {
+      el("curvatureNote").style.display = "block";
+      el("curvatureNote").textContent = `Earth curvature: geometric radio horizon ≈ ${(d_horizon/1000).toFixed(1)} km. Current r = ${(r/1000).toFixed(1)} km is beyond line-of-sight. Path is assumed to continue through seawater or crust (no diffraction model).`;
+    } else {
+      el("curvatureNote").style.display = "none";
+    }
+  } else {
+    el("curvatureNote").style.display = "none";
+  }
+
+  // Render results
+  const res = el("results");
+  res.innerHTML = `
+    <div class="result-item"><div class="label">TX impedance Z (air)</div><div class="num">${Ztx.toFixed(1)} Ω</div></div>
+    <div class="result-item"><div class="label">P<sub>total</sub> (independent of r)</div><div class="num">${Pout > 1e-3 ? Pout.toFixed(3)+" W" : Pout.toExponential(2)+" W"}</div></div>
+    <div class="result-item"><div class="label">Power density S @ RX</div><div class="num">${S.toExponential(2)} W/m²</div></div>
+    <div class="result-item"><div class="label">Est. |E| @ RX</div><div class="num">${E.toExponential(2)} V/m</div></div>
+    <div class="result-item"><div class="label">Nikolova–Zimmerman |A<sub>z</sub>| (illustrative)</div><div class="num">${A_nz.toExponential(2)} Wb/m</div></div>
+    <div class="result-item"><div class="label">Interface T (set to 1)</div><div class="num">1.00</div></div>
+    <div class="result-item"><div class="label">Detector current</div><div class="num">${I_det.toExponential(2)} A</div></div>
+    <div class="result-item"><div class="label">Est. SNR</div><div class="num">${SNR > 1e4 ? SNR.toExponential(1) : SNR.toFixed(1)}</div></div>
+    <div class="result-item"><div class="label">I required for SNR=${snrT}</div><div class="num">${isFinite(I_req) ? (I_req>=1 ? I_req.toFixed(2) : I_req.toExponential(2)) : "∞"} A</div></div>
+  `;
+
+  // Segment table
+  const tbody = el("segTable").querySelector("tbody");
+  tbody.innerHTML = rows.map(row => `
+    <tr>
+      <td>${row.name}</td>
+      <td>${row.len < 1 ? (row.len*1000).toFixed(1)+" mm" : row.len.toFixed(2)+" m"}</td>
+      <td>${row.m.eps_r}</td>
+      <td>${row.m.mu_r}</td>
+      <td>${(row.Z/Z0).toFixed(3)}</td>
+      <td>T≡1 (see §1b)</td>
+    </tr>
+  `).join("");
+
+  drawPath(segs, r);
+}
+
+function drawPath(segs, r) {
+  const canvas = el("pathCanvas");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // background
+  ctx.fillStyle = "#0c1220";
+  ctx.fillRect(0, 0, W, H);
+
+  // total length for scaling (log-ish for long paths)
+  const total = segs.reduce((a,s) => a + s.len, 0) || 1;
+  let x = 20;
+  const usable = W - 40;
+  const y0 = H/2;
+
+  // draw segments proportional to log(length) so thin walls remain visible
+  const logLens = segs.map(s => Math.log10(s.len + 1e-4));
+  const sumLog = logLens.reduce((a,b)=>a+b,0) || 1;
+
+  segs.forEach((s, i) => {
+    const m = MEDIA[s.key];
+    const w = (logLens[i] / sumLog) * usable;
+    ctx.fillStyle = m.color;
+    ctx.fillRect(x, y0 - 25, w, 50);
+    ctx.strokeStyle = "#1e293b";
+    ctx.strokeRect(x, y0 - 25, w, 50);
+    // label
+    if (w > 40) {
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(s.key, x + w/2, y0 + 5);
+    }
+    x += w;
+  });
+
+  // axis label
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "12px sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("TX (cage)  →  fixed enclosure path  →  variable outer path to RX   (lengths log-scaled for visibility)", 20, 20);
+  ctx.fillText(`Total r ≈ ${r >= 1000 ? (r/1000).toFixed(1)+" km" : r.toFixed(0)+" m"}`, 20, H - 12);
+}
+
+// event listeners
+[Islider, fslider, rslider, platformSel, altSlider, crustSlider, rxMedSel, detSel, snrTargetInp].forEach(e => {
+  e.addEventListener("input", recalc);
+  e.addEventListener("change", recalc);
+});
+
+// init
+updateLabels();
+recalc();
+</script>
+</body>
+</html>
