@@ -86,8 +86,9 @@
   <div class="card">
     <h2>1. The Power-Out Equation (Hively)</h2>
     <div class="formula">
-      P<sub>OUT</sub> = (I<sup>2</sup> / (4π r)<sup>2</sup>) × √(μ / ε) &nbsp;&nbsp;=&nbsp;&nbsp; (I<sup>2</sup> Z) / (4π r)<sup>2</sup>
+      P<sub>OUT</sub> = I<sup>2</sup> r̂ / [2 (4π r)<sup>2</sup>] × √(μ / ε) &nbsp;&nbsp;=&nbsp;&nbsp; (I<sup>2</sup> Z) / [2 (4π r)<sup>2</sup>] &nbsp;&nbsp;(W/m², along r̂)
     </div>
+    <p style="font-size:0.85rem;color:#94a3b8;">Hively &amp; Loebl 2019 Eq. 38/B5 <em>as corrected by the erratum</em> (Phys. Essays 32(3), 417; <strong>FACT</strong>, erratum-sourced). It is a power <em>density</em>. I is the peak current (<strong>ASSUMPTION</strong>, confirmed by Dan Britton 2026-09-30).</p>
     <p>where <strong>Z = √(μ/ε)</strong> is the intrinsic impedance of the propagation medium, <strong>I</strong> is the peak antenna current of the gradient-driven (irrotational) current density, and <strong>r</strong> is radial distance. In free space Z<sub>0</sub> ≈ 376.73 Ω. Changing the medium changes Z:</p>
     <div class="formula">
       Z = Z<sub>0</sub> × √(μ<sub>r</sub> / ε<sub>r</sub>)
@@ -95,9 +96,11 @@
     <p>In this scenario the transmitter is always in <strong>air inside the copper Faraday cage</strong>, so Z ≈ Z<sub>0</sub>. The SLW then propagates through the subsequent media. Only geometric 1/r<sup>2</sup> spreading of power density is applied; classical skin-effect and Fresnel losses are omitted.</p>
     <p><strong>Corrected formula (28 Jul 2026):</strong> Earlier versions of this page contained a coding error that made total power fall as 1/r² (and density as 1/r⁴). That is physically impossible for a continuous-wave radiator and produced unrealistically high required currents at long range. The corrected educational model is:</p>
     <div class="formula">
-      S = [I² Z / (4π r)²] &nbsp;&nbsp;(power density, W/m²)<br>
-      P<sub>total</sub> = S × 4π r² = I² Z / (4π) &nbsp;&nbsp;(total power, independent of r)
+      S = P<sub>OUT</sub> = I² Z / [2 (4π r)²] &nbsp;&nbsp;(power density, W/m²)<br>
+      P<sub>total</sub> = S × 4π r² = I² Z / (8π) &nbsp;&nbsp;(total power, independent of r; <strong>DERIVED / ASSUMPTION</strong>: spherical integral, not the paper's P<sub>OUT</sub>)
     </div>
+    <p style="font-size:0.85rem;color:#94a3b8;">Cross-reference (documented difference): US 9,306,527 Eq. 15, P = (I²/4π)√(μ/ε) in watts, is twice the erratum-integrated total I² Z/(8π). The erratum does not correct the patent.</p>
+    <div class="note" id="formula-history"><b>Formula history (2026-09-30, version pout-erratum-v1).</b> <b>FACT</b> (erratum-sourced): Hively &amp; Loebl 2019 Eq. 38/B5 as corrected by the erratum (Phys. Essays 32(3), 417) is P<sub>OUT</sub> = I² r̂ / [2 (4π r)²] · √(μ/ε), a power <em>density</em> in W/m² along r̂. Until this date this page used the as-first-printed form without the ½ (I² Z / (4π r)²), which is 3.01 dB (×2) too high; every power or density value is now ×0.5 (−3.01 dB) and every field amplitude ×0.7071. <b>ASSUMPTION</b>: I is the peak amplitude (confirmed by Dan Britton, 2026-09-30). <b>DERIVED / ASSUMPTION</b> (spherical integral, not the paper's P<sub>OUT</sub>): total watts = 4π r² · P<sub>OUT</sub> = I² Z / (8π). US 9,306,527 Eq. 15, P = (I²/4π)√(μ/ε) in watts, is quoted unchanged as a patent quote; it is twice the erratum-integrated total (documented difference: the erratum does not correct the patent).<br>Version: pout-erratum-v1 (2026-09-30).</div>
     <p>This restores the scale of the earlier SNR simulators (tens of amperes for positive SNR at hundreds of km) while remaining consistent with free-space geometric spreading and with the Nikolova–Zimmerman free-space A<sub>z</sub> ~ μ<sub>0</sub> I L<sub>eff</sub> / (4π r) amplitude.</p>
     <div class="note">
       Key theoretical claim (Hively et al.): because the SLW has B ≡ 0 there are no Faraday-induced eddy currents, so the classical skin effect does not attenuate the wave even in good conductors. Propagation in linearly conductive media (J = σE with constant σ) is lossless for the SLW amplitude beyond the usual geometric factor.
@@ -253,7 +256,7 @@
   <footer>
     Educational tool for scalar-longitudinal-wave studies (Hively EED / US 9,306,527 + Nikolova–Zimmerman CEM-R-46). 
     Not a claim of experimental validation. Linearly-resistive assumption and absence of skin effect are theoretical predictions of the cited work.
-    TX fixed in air (Z ≈ Z<sub>0</sub>). Power-density formula corrected 28 Jul 2026 so total power is independent of r (previous 1/r⁴ density error removed). Classical Fresnel omitted; steel μ<sub>r</sub> ≈ 1 (B ≡ 0).
+    TX fixed in air (Z ≈ Z<sub>0</sub>). Power-density formula corrected 28 Jul 2026 so total power is independent of r (previous 1/r⁴ density error removed); P<sub>OUT</sub> per the Hively &amp; Loebl erratum (½ factor) 30 Sep 2026, version pout-erratum-v1. Classical Fresnel omitted; steel μ<sub>r</sub> ≈ 1 (B ≡ 0).
   </footer>
 
 <script>
@@ -378,14 +381,15 @@ function recalc() {
   //   Total radiated power P_total is independent of r
   //
   // We take the free-space form that recovers the earlier simulators’ scale:
-  //   S = (I² * Z) / (4π r)²          [W/m²]
-  //   P_total = S * 4π r² = (I² * Z) / (4π)   [W]
+  //   2026-09-30: P_OUT per Hively & Loebl 2019 Eq. 38/B5 as corrected by the erratum (Phys. Essays 32(3) 417):
+  //   S = P_OUT = (I_pk² * Z) / [2 (4π r)²]        [W/m²]   (was (I² Z)/(4π r)², no 1/2; I = peak, ASSUMPTION)
+  //   P_total = S * 4π r² = (I² * Z) / (8π)        [W]      (DERIVED, ASSUMPTION: spherical integral)
   //
   // This matches the spirit of Hively’s CE/μ flux integrated over a sphere while
   // preserving geometric spreading only. Classical skin / Fresnel factors remain off.
 
-  const S = (I * I * Ztx) / Math.pow(4 * Math.PI * r, 2); // W/m²  (power density)
-  const Pout = S * 4 * Math.PI * r * r;                  // W     (total power, independent of r)
+  const S = (I * I * Ztx) / (2 * Math.pow(4 * Math.PI * r, 2)); // W/m²  (power density = P_OUT per erratum)
+  const Pout = S * 4 * Math.PI * r * r;                  // W     (derived total, independent of r)
 
   // Path (for display and local Z only)
   const segs = buildPath(r, platform, alt, crustLen);
@@ -440,8 +444,8 @@ function recalc() {
   const res = el("results");
   res.innerHTML = `
     <div class="result-item"><div class="label">TX impedance Z (air)</div><div class="num">${Ztx.toFixed(1)} Ω</div></div>
-    <div class="result-item"><div class="label">P<sub>total</sub> (independent of r)</div><div class="num">${Pout > 1e-3 ? Pout.toFixed(3)+" W" : Pout.toExponential(2)+" W"}</div></div>
-    <div class="result-item"><div class="label">Power density S @ RX</div><div class="num">${S.toExponential(2)} W/m²</div></div>
+    <div class="result-item"><div class="label">P<sub>total</sub> (derived, ASSUMPTION; independent of r)</div><div class="num">${Pout > 1e-3 ? Pout.toFixed(3)+" W" : Pout.toExponential(2)+" W"}</div></div>
+    <div class="result-item"><div class="label">P<sub>OUT</sub> power density S @ RX (W/m²)</div><div class="num">${S.toExponential(2)} W/m²</div></div>
     <div class="result-item"><div class="label">Est. |E| @ RX</div><div class="num">${E.toExponential(2)} V/m</div></div>
     <div class="result-item"><div class="label">Nikolova–Zimmerman |A<sub>z</sub>| (illustrative)</div><div class="num">${A_nz.toExponential(2)} Wb/m</div></div>
     <div class="result-item"><div class="label">Interface T (set to 1)</div><div class="num">1.00</div></div>
