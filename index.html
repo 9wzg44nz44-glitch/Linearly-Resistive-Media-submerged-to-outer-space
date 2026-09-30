@@ -46,6 +46,8 @@
   .value { color: #f8fafc; font-weight: 600; font-variant-numeric: tabular-nums; }
   table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.5rem 0; }
   th, td { border: 1px solid var(--border); padding: 0.35rem 0.5rem; text-align: left; }
+  /* 2026-09-30 minimal responsive fix (layout only, no physics): wide tables scroll inside themselves at narrow widths */
+  @media (max-width: 600px) { table { display: block; overflow-x: auto; max-width: 100%; } img, canvas, svg { max-width: 100%; } }
   th { background: #243044; color: #93c5fd; }
   tr:nth-child(even) { background: #1e293b; }
   .highlight { background: #1e3a5f !important; }
